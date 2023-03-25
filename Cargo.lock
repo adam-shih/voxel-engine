@@ -469,6 +469,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_fly_camera"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6217548790087c7b79675f87397ea90d27158edb4d533cc428170ca963db2a2"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_gilrs"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2950,6 +2959,7 @@ name = "voxel-engine"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_fly_camera",
 ]
 
 [[package]]
