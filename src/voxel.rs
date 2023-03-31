@@ -23,7 +23,7 @@ pub struct ChunkMap {
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     // TODO: make this noise actually work
 
-    // let mut rng = rand::thread_rng();
+    let mut rng = rand::thread_rng();
     // let mut noise = FastNoise::seeded(rng.gen());
     // noise.set_noise_type(NoiseType::PerlinFractal);
     // noise.set_fractal_type(FractalType::FBM);
@@ -41,7 +41,7 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
                     y + chunk_pos.x * 32,
                     z + chunk_pos.x * 32,
                 );
-                voxels.push(Voxel { is_solid: true });
+                voxels.push(Voxel { is_solid: rng.gen() });
             }
         }
     }
@@ -49,9 +49,13 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     voxels
 }
 
-pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Vec<[f32; 3]>, Vec<u32>) {
+pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Vec<[f32; 3]>, Vec<u32>, Vec<[f32; 4]>, Vec<[f32; 2]>, Vec<[f32; 3]>) {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
+
+    let mut colors = Vec::new();
+    let mut uvs = Vec::new();
+    let mut normals = Vec::new();
 
     for (chunk_pos, chunk) in chunk_map.iter() {
         let chunk_offset = Vec3::new(
@@ -77,14 +81,21 @@ pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Vec<[f32; 3]>, Vec<u
 
                     let cube_vertices = generate_cube_vertices(pos);
                     let cube_indices = generate_cube_indices(vertices.len() as u32);
+                    println!("Vertices len: {}", cube_vertices.len());
                     vertices.extend(cube_vertices);
                     indices.extend(cube_indices);
+                    
+                    for _ in 0..3 {
+                        colors.extend([[0.0, 1.0, 0.0, 1.0]; 8]);
+                        uvs.extend([[1.0, 0.0]; 8]);
+                        normals.extend([[1.0, 0.0, 0.0]; 8]);
+                    }
                 }
             }
         }
     }
 
-    (vertices, indices)
+    (vertices, indices, colors, uvs, normals)
 }
 
 fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
