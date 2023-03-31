@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 bevy = "0.10.0"
 bevy_fly_camera = "0.10.0"
+bracket-noise = "0.8.7"
+rand = "0.8.5"

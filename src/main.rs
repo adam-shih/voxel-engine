@@ -1,7 +1,10 @@
 //! A simple 3D scene with light shining over a cube sitting on a plane.
 
-use bevy::prelude::*;
+use std::collections::HashMap;
+
+use bevy::{prelude::*, render::{render_resource::PrimitiveTopology, mesh::Indices}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use voxel_engine::voxel::{generate_voxel_data, Chunk, ChunkMap, generate_mesh};
 
 fn main() {
     App::new()
@@ -11,25 +14,32 @@ fn main() {
         .run();
 }
 
-/// set up a simple 3D scene
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Plane::from_size(5.0).into()),
-        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-        ..default()
-    });
+    // chunks
+    let mut chunk_map = HashMap::new();
+    let chunk_pos = IVec3::ZERO;
+    let voxels = generate_voxel_data(chunk_pos);
+    let chunk = Chunk { voxels };
+    chunk_map.insert(chunk_pos, chunk);
+
+    // mesh
+    let (vertices, indices) = generate_mesh(&chunk_map);
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+    mesh.set_indices(Some(Indices::U32(indices)));
+
     // cube
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+        mesh: meshes.add(mesh),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..default()
     });
+
     // light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
