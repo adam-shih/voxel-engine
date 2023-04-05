@@ -2,14 +2,19 @@
 
 use std::collections::HashMap;
 
-use bevy::{prelude::*, render::{render_resource::PrimitiveTopology, mesh::Indices}};
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
-use voxel_engine::voxel::{generate_voxel_data, Chunk, ChunkMap, generate_mesh};
+use bevy_prototype_debug_lines::*;
+use voxel_engine::voxel::{generate_mesh, generate_voxel_data, Chunk};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(FlyCameraPlugin)
+        .add_plugin(DebugLinesPlugin::default())
         .add_startup_system(setup)
         .run();
 }
@@ -27,11 +32,11 @@ fn setup(
     chunk_map.insert(chunk_pos, chunk);
 
     // mesh
-    let (vertices, indices, colors, uvs, normals) = generate_mesh(&chunk_map);
+    let (vertices, indices, normals) = generate_mesh(&chunk_map);
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+    // mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    // mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.set_indices(Some(Indices::U32(indices)));
 
@@ -52,7 +57,7 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-    
+
     // fly camera
     commands
         .spawn(Camera3dBundle {
