@@ -1,20 +1,18 @@
-//! A simple 3D scene with light shining over a cube sitting on a plane.
-
 use std::collections::HashMap;
 
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use bevy_flycam::prelude::*;
 use bevy_prototype_debug_lines::*;
 use voxel_engine::voxel::{generate_mesh, generate_voxel_data, Chunk};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlyCameraPlugin)
         .add_plugin(DebugLinesPlugin::default())
+        .add_plugin(PlayerPlugin)
         .add_startup_system(setup)
         .run();
 }
@@ -32,14 +30,10 @@ fn setup(
     chunk_map.insert(chunk_pos, chunk);
 
     // mesh
-    let (vertices, indices, normals) = generate_mesh(&chunk_map);
+    let (vertices, indices) = generate_mesh(&chunk_map);
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    // mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    // mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.set_indices(Some(Indices::U32(indices)));
-
     commands.spawn(PbrBundle {
         mesh: meshes.add(mesh),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
@@ -57,12 +51,4 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-
-    // fly camera
-    commands
-        .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        })
-        .insert(FlyCamera::default());
 }
