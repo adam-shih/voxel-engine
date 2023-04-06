@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{
-    prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
-};
+use bevy::prelude::*;
 use bevy_flycam::prelude::*;
 use bevy_prototype_debug_lines::*;
 use voxel_engine::voxel::{generate_mesh, generate_voxel_data, Chunk};
@@ -22,20 +19,17 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // chunks
     let mut chunk_map = HashMap::new();
     let chunk_pos = IVec3::ZERO;
-    let voxels = generate_voxel_data(chunk_pos);
-    let chunk = Chunk { voxels };
-    chunk_map.insert(chunk_pos, chunk);
+    chunk_map.insert(
+        chunk_pos,
+        Chunk {
+            voxels: generate_voxel_data(chunk_pos),
+        },
+    );
 
-    // mesh
-    let (vertices, indices) = generate_mesh(&chunk_map);
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    mesh.set_indices(Some(Indices::U32(indices)));
-    mesh.duplicate_vertices();
-    mesh.compute_flat_normals();
+    let mesh = generate_mesh(&chunk_map);
+
     commands.spawn(PbrBundle {
         mesh: meshes.add(mesh),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
@@ -43,14 +37,13 @@ fn setup(
         ..default()
     });
 
-    // light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        transform: Transform::from_xyz(0.0, 40.0, 0.0),
         ..default()
     });
 }

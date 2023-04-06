@@ -1,4 +1,8 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
+use noise::{NoiseFn, Perlin};
 use std::collections::HashMap;
 
 const CHUNK_SIZE: i32 = 32;
@@ -13,23 +17,24 @@ pub struct Chunk {
     pub voxels: Vec<Voxel>,
 }
 
-#[derive(Debug)]
-pub struct ChunkMap {
-    pub map: HashMap<IVec3, Chunk>,
-}
-
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
+    let perlin = Perlin::new(123);
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
-                let _pos = IVec3::new(
+                let pos = IVec3::new(
                     x + chunk_pos.x * CHUNK_SIZE,
                     y + chunk_pos.x * CHUNK_SIZE,
                     z + chunk_pos.x * CHUNK_SIZE,
                 );
-                voxels.push(Voxel { is_solid: true });
+
+                let noise =
+                    perlin.get([pos.x as f64 + 0.5, pos.y as f64 + 0.5, pos.z as f64 + 0.5]);
+                println!("{}", noise);
+                let is_solid = noise > 0.0;
+                voxels.push(Voxel { is_solid });
             }
         }
     }
@@ -37,7 +42,7 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     voxels
 }
 
-pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Vec<[f32; 3]>, Vec<u32>) {
+pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> Mesh {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
@@ -73,8 +78,18 @@ pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Vec<[f32; 3]>, Vec<u
         }
     }
 
-    // (vertices, indices, colors, uvs, normals)
-    (vertices, indices)
+    // color all voxels green for now
+    let colors = vec![[0.0, 1.0, 0.0, 1.0]; vertices.len()];
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    mesh.set_indices(Some(Indices::U32(indices)));
+
+    mesh.duplicate_vertices();
+    mesh.compute_flat_normals();
+
+    mesh
 }
 
 fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
@@ -97,8 +112,7 @@ fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
 
 #[rustfmt::skip]
 fn generate_cube_indices(start_index: u32) -> Vec<u32> {
-    // triangles that make up mesh
-    // clockwise order gives orthogonal normal
+    // indices of points that make up triangles
     vec![
         // top
         0, 1, 2, 2, 3, 0, 
