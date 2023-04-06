@@ -19,10 +19,11 @@ pub struct Chunk {
 
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
-    let perlin = Perlin::new(123);
+    let perlin = Perlin::new(42);
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
+            println!("{}", y as f64 / CHUNK_SIZE as f64);
             for z in 0..CHUNK_SIZE {
                 let pos = IVec3::new(
                     x + chunk_pos.x * CHUNK_SIZE,
@@ -30,10 +31,9 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
                     z + chunk_pos.x * CHUNK_SIZE,
                 );
 
-                let noise =
-                    perlin.get([pos.x as f64 + 0.5, pos.y as f64 + 0.5, pos.z as f64 + 0.5]);
-                println!("{}", noise);
-                let is_solid = noise > 0.0;
+                let noise = perlin.get([pos.x as f64 * 0.01, pos.z as f64 * 0.01]);
+                let height = y as f64 / CHUNK_SIZE as f64;
+                let is_solid = noise >= height;
                 voxels.push(Voxel { is_solid });
             }
         }
