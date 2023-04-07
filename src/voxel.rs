@@ -2,7 +2,7 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use noise::{NoiseFn, Perlin};
+use noise::{NoiseFn, Simplex};
 use std::collections::HashMap;
 
 const CHUNK_SIZE: i32 = 32;
@@ -19,7 +19,7 @@ pub struct Chunk {
 
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
-    let perlin = Perlin::new(42);
+    let simplex = Simplex::new(42);
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -31,7 +31,7 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
                     z + chunk_pos.x * CHUNK_SIZE,
                 );
 
-                let noise = perlin.get([pos.x as f64 * 0.01, pos.z as f64 * 0.01]);
+                let noise = simplex.get([pos.x as f64 * 0.01, pos.z as f64 * 0.01]);
                 let height = y as f64 / CHUNK_SIZE as f64;
                 let is_solid = noise >= height;
                 voxels.push(Voxel { is_solid });
