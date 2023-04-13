@@ -2,10 +2,11 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
+use bevy_rapier3d::prelude::*;
 use noise::{NoiseFn, Simplex};
 use std::collections::HashMap;
 
-const CHUNK_SIZE: i32 = 32;
+const CHUNK_SIZE: i32 = 8;
 
 #[derive(Debug)]
 pub struct Voxel {
@@ -23,7 +24,6 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
-            println!("{}", y as f64 / CHUNK_SIZE as f64);
             for z in 0..CHUNK_SIZE {
                 let pos = IVec3::new(
                     x + chunk_pos.x * CHUNK_SIZE,
@@ -42,7 +42,7 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     voxels
 }
 
-pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> Mesh {
+pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Mesh, Collider) {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
@@ -86,10 +86,12 @@ pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     mesh.set_indices(Some(Indices::U32(indices)));
 
+    let collider = Collider::from_bevy_mesh(&mesh, &ComputedColliderShape::TriMesh).unwrap();
+
     mesh.duplicate_vertices();
     mesh.compute_flat_normals();
 
-    mesh
+    (mesh, collider)
 }
 
 fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
