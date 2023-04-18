@@ -79,7 +79,7 @@ pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Mesh, Collider) {
     }
 
     // color all voxels green for now
-    let colors = vec![[0.0, 1.0, 0.0, 1.0]; vertices.len()];
+    let colors = vec![[1.0, 1.0, 1.0, 0.0]; vertices.len()];
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);

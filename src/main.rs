@@ -18,6 +18,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    flycam: Query<Entity, With<FlyCam>>,
 ) {
     let mut chunk_map = HashMap::new();
     let chunk_pos = IVec3::ZERO;
@@ -32,7 +33,7 @@ fn setup(
     commands
         .spawn(PbrBundle {
             mesh: meshes.add(mesh),
-            material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+            material: materials.add(Color::NONE.into()),
             transform: Transform::from_xyz(0.0, 0.5, 0.0),
             ..default()
         })
@@ -47,4 +48,10 @@ fn setup(
         transform: Transform::from_xyz(0.0, 40.0, 0.0),
         ..default()
     });
+
+    if let Ok(entity) = flycam.get_single() {
+        commands
+            .entity(entity)
+            .insert(Collider::capsule_z(1.0, 1.0));
+    }
 }
