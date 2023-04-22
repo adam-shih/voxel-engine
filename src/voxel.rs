@@ -6,7 +6,7 @@ use bevy_rapier3d::prelude::*;
 use noise::{NoiseFn, Simplex};
 use std::collections::HashMap;
 
-const CHUNK_SIZE: i32 = 8;
+const CHUNK_SIZE: i32 = 32;
 
 #[derive(Debug)]
 pub struct Voxel {

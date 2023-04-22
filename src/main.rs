@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_flycam::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::collections::HashMap;
-use voxel_engine::voxel::{generate_mesh, generate_voxel_data, Chunk};
+use voxel_engine::{
+    diagnostic::ScreenDiagnosticsPlugin,
+    voxel::{generate_mesh, generate_voxel_data, Chunk},
+};
 
 fn main() {
     App::new()
@@ -10,6 +13,7 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(ScreenDiagnosticsPlugin)
         .add_startup_system(setup)
         .run();
 }
@@ -33,7 +37,7 @@ fn setup(
     commands
         .spawn(PbrBundle {
             mesh: meshes.add(mesh),
-            material: materials.add(Color::NONE.into()),
+            material: materials.add(Color::GREEN.into()),
             transform: Transform::from_xyz(0.0, 0.5, 0.0),
             ..default()
         })
