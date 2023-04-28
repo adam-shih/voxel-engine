@@ -3,6 +3,7 @@ use bevy_flycam::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::collections::HashMap;
 use voxel_engine::{
+    chunk_manager::{load_chunks, ChunkManager},
     diagnostic::ScreenDiagnosticsPlugin,
     voxel::{generate_mesh, generate_voxel_data, Chunk},
 };
@@ -15,6 +16,8 @@ fn main() {
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_startup_system(setup)
+        .add_system(load_chunks)
+        .init_resource::<ChunkManager>()
         .run();
 }
 
