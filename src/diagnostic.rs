@@ -3,8 +3,6 @@ use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::fmt::Write;
 
-use crate::voxel::CHUNK_SIZE;
-
 const FONT_SIZE: f32 = 32.0;
 const FONT_COLOR: Color = Color::WHITE;
 

@@ -4,7 +4,6 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use noise::{NoiseFn, Simplex};
-use std::collections::HashMap;
 
 pub const CHUNK_SIZE: i32 = 1;
 
@@ -43,38 +42,37 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     voxels
 }
 
-pub fn generate_mesh(chunk_map: &HashMap<IVec3, Chunk>) -> (Mesh, Collider) {
+pub fn generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
-    for (chunk_pos, chunk) in chunk_map.iter() {
-        let chunk_offset = Vec3::new(
-            chunk_pos.x as f32 * 1.0,
-            chunk_pos.y as f32 * 1.0,
-            chunk_pos.z as f32 * 1.0,
-        );
+    let chunk_offset = Vec3::new(
+        chunk_pos.x as f32 * 1.0,
+        chunk_pos.y as f32 * 1.0,
+        chunk_pos.z as f32 * 1.0,
+    );
 
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
-                    let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
+    for x in 0..CHUNK_SIZE {
+        for y in 0..CHUNK_SIZE {
+            for z in 0..CHUNK_SIZE {
+                let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
 
-                    if !chunk.voxels[index].is_solid {
-                        continue;
-                    }
-
-                    let pos = Vec3::new(
-                        x as f32 + chunk_offset.x,
-                        y as f32 + chunk_offset.y,
-                        z as f32 + chunk_offset.z,
-                    );
-
-                    let cube_vertices = generate_cube_vertices(pos);
-                    let cube_indices = generate_cube_indices(vertices.len() as u32);
-
-                    vertices.extend(cube_vertices);
-                    indices.extend(cube_indices);
+                if !chunk.voxels[index].is_solid {
+                    continue;
                 }
+
+                let pos = Vec3::new(
+                    x as f32 + chunk_offset.x,
+                    // y as f32 + chunk_offset.y,
+                    0.0,
+                    z as f32 + chunk_offset.z,
+                );
+
+                let cube_vertices = generate_cube_vertices(pos);
+                let cube_indices = generate_cube_indices(vertices.len() as u32);
+
+                vertices.extend(cube_vertices);
+                indices.extend(cube_indices);
             }
         }
     }

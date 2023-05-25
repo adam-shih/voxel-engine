@@ -1,12 +1,8 @@
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
-use bevy_rapier3d::prelude::*;
-use std::collections::HashMap;
-use voxel_engine::{
-    chunk_manager::{load_chunks, load_chunks_test, mark_chunks_to_load, ChunkManager},
-    diagnostic::ScreenDiagnosticsPlugin,
-    voxel::{generate_mesh, generate_voxel_data, Chunk},
-};
+use voxel_engine::chunk_manager::load_chunks_test;
+use voxel_engine::chunk_manager::{mark_chunks_to_load, ChunkManager};
+use voxel_engine::diagnostic::ScreenDiagnosticsPlugin;
 
 fn main() {
     App::new()
@@ -16,11 +12,6 @@ fn main() {
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_system(setup.on_startup())
-        .add_system(
-            load_chunks
-                .on_startup()
-                .in_base_set(StartupSet::PostStartup),
-        )
         .add_system(mark_chunks_to_load)
         .add_system(load_chunks_test)
         .init_resource::<ChunkManager>()
