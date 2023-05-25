@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
-use voxel_engine::chunk_manager::load_chunks_test;
-use voxel_engine::chunk_manager::{mark_chunks_to_load, ChunkManager};
+use voxel_engine::chunk_manager::*;
 use voxel_engine::diagnostic::ScreenDiagnosticsPlugin;
 
 fn main() {
@@ -11,10 +10,8 @@ fn main() {
         // .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(ScreenDiagnosticsPlugin)
+        .add_plugin(ChunkManagerPlugin)
         .add_system(setup.on_startup())
-        .add_system(mark_chunks_to_load)
-        .add_system(load_chunks_test)
-        .init_resource::<ChunkManager>()
         .run();
 }
 
