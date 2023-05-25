@@ -6,7 +6,7 @@ use bevy_rapier3d::prelude::*;
 use noise::{NoiseFn, Simplex};
 use std::collections::HashMap;
 
-const CHUNK_SIZE: i32 = 32;
+pub const CHUNK_SIZE: i32 = 1;
 
 #[derive(Debug)]
 pub struct Voxel {
@@ -15,6 +15,7 @@ pub struct Voxel {
 
 #[derive(Debug)]
 pub struct Chunk {
+    pub id: Entity,
     pub voxels: Vec<Voxel>,
 }
 

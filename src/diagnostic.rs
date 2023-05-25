@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::fmt::Write;
 
+use crate::voxel::CHUNK_SIZE;
+
 const FONT_SIZE: f32 = 32.0;
 const FONT_COLOR: Color = Color::WHITE;
 
@@ -76,7 +78,7 @@ fn update_fps_text(
 ) {
     let fps = diagnostics
         .get(FrameTimeDiagnosticsPlugin::FPS)
-        .and_then(|fps| fps.smoothed());
+        .and_then(|fps| fps.value());
 
     if let Ok(mut text) = fps_text_query.get_single_mut() {
         let value = &mut text.sections[0].value;
@@ -94,7 +96,7 @@ fn update_pos_text(
     mut pos_text_query: Query<&mut Text, With<PlayerPositionText>>,
     player_transform_query: Query<&Transform, With<FlyCam>>,
 ) {
-    let pos = player_transform_query.get_single().unwrap().translation / 32.0;
+    let pos = player_transform_query.get_single().unwrap().translation;
 
     if let Ok(mut text) = pos_text_query.get_single_mut() {
         let value = &mut text.sections[0].value;
