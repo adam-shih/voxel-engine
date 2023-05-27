@@ -20,7 +20,7 @@ pub struct Chunk {
 
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
-    let simplex = Simplex::new(42);
+    let simplex = Simplex::new(123);
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -31,7 +31,7 @@ pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
                     z + chunk_pos.x * CHUNK_SIZE,
                 );
 
-                let noise = simplex.get([pos.x as f64 * 0.01, pos.z as f64 * 0.01]);
+                let noise = simplex.get([pos.x as f64, pos.z as f64]);
                 let height = y as f64 / CHUNK_SIZE as f64;
                 let is_solid = noise >= height;
                 voxels.push(Voxel { is_solid });
@@ -61,7 +61,11 @@ pub fn generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
                     continue;
                 }
 
-                let pos = Vec3::new(x as f32 + chunk_offset.x, 0.0, z as f32 + chunk_offset.z);
+                let pos = Vec3::new(
+                    x as f32 + chunk_offset.x,
+                    y as f32 + chunk_offset.y,
+                    z as f32 + chunk_offset.z,
+                );
 
                 let cube_vertices = generate_cube_vertices(pos);
                 let cube_indices = generate_cube_indices(vertices.len() as u32);
@@ -106,27 +110,15 @@ fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
     ]
 }
 
-#[rustfmt::skip]
 fn generate_cube_indices(start_index: u32) -> Vec<u32> {
     // indices of points that make up triangles
     vec![
-        // top
-        0, 1, 2, 2, 3, 0, 
-
-        // bottom
-        5, 7, 4, 5, 6, 7, 
-
-        // left
-        7, 0, 4, 4, 0, 3, 
-
-        // right 
-        6, 5, 1, 1, 5, 2, 
-
-        // front
-        7, 1, 0, 7, 6, 1,
-
-        // back
-        5, 4, 3, 3, 2, 5,
+        0, 1, 2, 2, 3, 0, // top
+        5, 7, 4, 5, 6, 7, // bottom
+        7, 0, 4, 4, 0, 3, // left
+        6, 5, 1, 1, 5, 2, // right
+        7, 1, 0, 7, 6, 1, // front
+        5, 4, 3, 3, 2, 5, // back
     ]
     .iter()
     .map(|index| index + start_index)

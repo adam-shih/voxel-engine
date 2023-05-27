@@ -1,9 +1,10 @@
-use crate::voxel::{generate_mesh, generate_voxel_data, Chunk, CHUNK_SIZE};
+use crate::{
+    config::Config,
+    voxel::{generate_mesh, generate_voxel_data, Chunk, CHUNK_SIZE},
+};
 use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::collections::HashMap;
-
-const RENDER_DISTANCE: i32 = 2;
 
 pub struct ChunkManagerPlugin;
 
@@ -41,6 +42,7 @@ pub struct WantsToUnload(pub IVec3);
 
 pub fn mark_chunks_to_unload(
     mut commands: Commands,
+    config: Res<Config>,
     player_pos: Query<&Transform, With<FlyCam>>,
     chunk_manager: ResMut<ChunkManager>,
 ) {
@@ -48,8 +50,8 @@ pub fn mark_chunks_to_unload(
     let player_chunk_pos = player_chunk_pos.floor().as_ivec3();
 
     for (chunk_pos, chunk) in chunk_manager.loaded.iter() {
-        if (player_chunk_pos.x - chunk_pos.x).abs() > RENDER_DISTANCE
-            || (player_chunk_pos.z - chunk_pos.z).abs() > RENDER_DISTANCE
+        if (player_chunk_pos.x - chunk_pos.x).abs() > config.render_distance
+            || (player_chunk_pos.z - chunk_pos.z).abs() > config.render_distance
         {
             commands.entity(chunk.id).insert(WantsToUnload(*chunk_pos));
         }
@@ -58,6 +60,7 @@ pub fn mark_chunks_to_unload(
 
 pub fn mark_chunks_to_load(
     mut commands: Commands,
+    config: Res<Config>,
     player_pos: Query<&Transform, With<FlyCam>>,
     mut chunk_manager: ResMut<ChunkManager>,
 ) {
@@ -65,8 +68,12 @@ pub fn mark_chunks_to_load(
     let player_chunk_pos = player_chunk_pos.floor().as_ivec3();
 
     // Iterate over all chunk positions within render distance
-    for x in (player_chunk_pos.x - RENDER_DISTANCE)..=(player_chunk_pos.x + RENDER_DISTANCE) {
-        for z in (player_chunk_pos.z - RENDER_DISTANCE)..=(player_chunk_pos.z + RENDER_DISTANCE) {
+    for x in (player_chunk_pos.x - config.render_distance)
+        ..=(player_chunk_pos.x + config.render_distance)
+    {
+        for z in (player_chunk_pos.z - config.render_distance)
+            ..=(player_chunk_pos.z + config.render_distance)
+        {
             let chunk_pos = IVec3::new(x, 0, z);
 
             if chunk_manager.loaded.contains_key(&chunk_pos) {

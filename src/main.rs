@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
 use voxel_engine::chunk_manager::*;
+use voxel_engine::config::Config;
 use voxel_engine::diagnostic::ScreenDiagnosticsPlugin;
 
 fn main() {
@@ -12,14 +13,12 @@ fn main() {
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_plugin(ChunkManagerPlugin)
         .add_system(setup.on_startup())
-        .insert_resource(MovementSettings {
-            speed: 2.0, // default: 12.0
-            ..default()
-        })
+        .insert_resource(Config { render_distance: 8 })
         .run();
 }
 
 fn setup(mut commands: Commands) {
+    // Spawn a simple light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
