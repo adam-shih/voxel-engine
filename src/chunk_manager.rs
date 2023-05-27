@@ -1,9 +1,9 @@
-use crate::voxel::{generate_mesh, generate_voxel_data, Chunk};
+use crate::voxel::{generate_mesh, generate_voxel_data, Chunk, CHUNK_SIZE};
 use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::collections::HashMap;
 
-const RENDER_DISTANCE: i32 = 1;
+const RENDER_DISTANCE: i32 = 2;
 
 pub struct ChunkManagerPlugin;
 
@@ -44,12 +44,13 @@ pub fn mark_chunks_to_unload(
     player_pos: Query<&Transform, With<FlyCam>>,
     chunk_manager: ResMut<ChunkManager>,
 ) {
-    let player_pos = player_pos.single().translation.as_ivec3();
+    let player_chunk_pos = player_pos.single().translation / CHUNK_SIZE as f32;
+    let player_chunk_pos = player_chunk_pos.floor().as_ivec3();
 
     for (chunk_pos, chunk) in chunk_manager.loaded.iter() {
-        let chunk_pos_vec2 = IVec2::new(chunk_pos.x, chunk_pos.z).as_vec2();
-        let player_pos_vec2 = IVec2::new(player_pos.x, player_pos.z).as_vec2();
-        if chunk_pos_vec2.distance(player_pos_vec2).abs() > RENDER_DISTANCE as f32 + 1.0 {
+        if (player_chunk_pos.x - chunk_pos.x).abs() > RENDER_DISTANCE
+            || (player_chunk_pos.z - chunk_pos.z).abs() > RENDER_DISTANCE
+        {
             commands.entity(chunk.id).insert(WantsToUnload(*chunk_pos));
         }
     }
@@ -60,28 +61,22 @@ pub fn mark_chunks_to_load(
     player_pos: Query<&Transform, With<FlyCam>>,
     mut chunk_manager: ResMut<ChunkManager>,
 ) {
-    let pos = player_pos.single().translation.as_ivec3();
+    let player_chunk_pos = player_pos.single().translation / CHUNK_SIZE as f32;
+    let player_chunk_pos = player_chunk_pos.floor().as_ivec3();
 
     // Iterate over all chunk positions within render distance
-    for x in (pos.x - RENDER_DISTANCE)..=(pos.x + RENDER_DISTANCE) {
-        for z in (pos.z - RENDER_DISTANCE)..=(pos.z + RENDER_DISTANCE) {
+    for x in (player_chunk_pos.x - RENDER_DISTANCE)..=(player_chunk_pos.x + RENDER_DISTANCE) {
+        for z in (player_chunk_pos.z - RENDER_DISTANCE)..=(player_chunk_pos.z + RENDER_DISTANCE) {
             let chunk_pos = IVec3::new(x, 0, z);
 
             if chunk_manager.loaded.contains_key(&chunk_pos) {
                 continue;
             }
 
-            // If chunk is unloaded, mark as WantsToLoad
-            if let Some(chunk) = chunk_manager.unloaded.get(&chunk_pos) {
-                commands.entity(chunk.id).insert(WantsToLoad(chunk_pos));
-            }
-            // Otherwise generate chunk in unloaded and mark
-            else {
-                let id = commands.spawn(WantsToLoad(chunk_pos)).id();
-                let voxels = generate_voxel_data(chunk_pos);
-                let chunk = Chunk { id, voxels };
-                chunk_manager.unloaded.insert(chunk_pos, chunk);
-            }
+            let id = commands.spawn(WantsToLoad(chunk_pos)).id();
+            let voxels = generate_voxel_data(chunk_pos);
+            let chunk = Chunk { id, voxels };
+            chunk_manager.unloaded.insert(chunk_pos, chunk);
         }
     }
 }

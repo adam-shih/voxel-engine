@@ -5,7 +5,7 @@ use bevy::{
 use bevy_rapier3d::prelude::*;
 use noise::{NoiseFn, Simplex};
 
-pub const CHUNK_SIZE: i32 = 1;
+pub const CHUNK_SIZE: i32 = 8;
 
 #[derive(Debug)]
 pub struct Voxel {
@@ -47,9 +47,9 @@ pub fn generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
     let mut indices = Vec::new();
 
     let chunk_offset = Vec3::new(
-        chunk_pos.x as f32 * 1.0,
-        chunk_pos.y as f32 * 1.0,
-        chunk_pos.z as f32 * 1.0,
+        chunk_pos.x as f32 * CHUNK_SIZE as f32,
+        chunk_pos.y as f32 * CHUNK_SIZE as f32,
+        chunk_pos.z as f32 * CHUNK_SIZE as f32,
     );
 
     for x in 0..CHUNK_SIZE {
@@ -61,12 +61,7 @@ pub fn generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
                     continue;
                 }
 
-                let pos = Vec3::new(
-                    x as f32 + chunk_offset.x,
-                    // y as f32 + chunk_offset.y,
-                    0.0,
-                    z as f32 + chunk_offset.z,
-                );
+                let pos = Vec3::new(x as f32 + chunk_offset.x, 0.0, z as f32 + chunk_offset.z);
 
                 let cube_vertices = generate_cube_vertices(pos);
                 let cube_indices = generate_cube_indices(vertices.len() as u32);

@@ -12,6 +12,10 @@ fn main() {
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_plugin(ChunkManagerPlugin)
         .add_system(setup.on_startup())
+        .insert_resource(MovementSettings {
+            speed: 2.0, // default: 12.0
+            ..default()
+        })
         .run();
 }
 
