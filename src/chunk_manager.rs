@@ -1,7 +1,4 @@
-use crate::{
-    config::Config,
-    voxel::{generate_mesh, generate_voxel_data, Chunk, CHUNK_SIZE},
-};
+use crate::{chunk::*, config::Config};
 use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::collections::HashMap;

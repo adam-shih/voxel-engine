@@ -13,7 +13,9 @@ fn main() {
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_plugin(ChunkManagerPlugin)
         .add_system(setup.on_startup())
-        .insert_resource(Config { render_distance: 8 })
+        .insert_resource(Config {
+            render_distance: 16,
+        })
         .run();
 }
 
