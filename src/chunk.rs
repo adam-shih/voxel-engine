@@ -1,68 +1,123 @@
 use crate::voxel::Voxel;
-use bevy::{
-    prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
-};
-use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
+use bevy::prelude::*;
 use noise::{NoiseFn, Simplex};
 
 pub const CHUNK_SIZE: i32 = 16;
 
 #[derive(Debug)]
-pub struct Chunk {
-    pub id: Entity,
-    pub voxels: Vec<Voxel>,
+pub struct MeshData {
+    pub vertices: Vec<[f32; 3]>,
+    pub indices: Vec<u32>,
 }
 
-pub fn generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
+impl MeshData {
+    pub fn generate(position: IVec3, voxels: Vec<Voxel>) -> Self {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
 
-    let chunk_offset = Vec3::new(
-        chunk_pos.x as f32 * CHUNK_SIZE as f32,
-        chunk_pos.y as f32 * CHUNK_SIZE as f32,
-        chunk_pos.z as f32 * CHUNK_SIZE as f32,
-    );
+        let chunk_offset = Vec3::new(
+            position.x as f32 * CHUNK_SIZE as f32,
+            position.y as f32 * CHUNK_SIZE as f32,
+            position.z as f32 * CHUNK_SIZE as f32,
+        );
 
-    for x in 0..CHUNK_SIZE {
-        for y in 0..CHUNK_SIZE {
-            for z in 0..CHUNK_SIZE {
-                let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
+                    let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
 
-                if !chunk.voxels[index].is_solid {
-                    continue;
+                    if !voxels[index].is_solid {
+                        continue;
+                    }
+
+                    let global_voxel_pos = Vec3::new(
+                        x as f32 + chunk_offset.x,
+                        y as f32 + chunk_offset.y,
+                        z as f32 + chunk_offset.z,
+                    );
+
+                    let cube_vertices = generate_cube_vertices(global_voxel_pos);
+                    let cube_indices = generate_cube_indices(vertices.len() as u32);
+
+                    vertices.extend(cube_vertices);
+                    indices.extend(cube_indices);
                 }
-
-                let pos = Vec3::new(
-                    x as f32 + chunk_offset.x,
-                    y as f32 + chunk_offset.y,
-                    z as f32 + chunk_offset.z,
-                );
-
-                let cube_vertices = generate_cube_vertices(pos);
-                let cube_indices = generate_cube_indices(vertices.len() as u32);
-
-                vertices.extend(cube_vertices);
-                indices.extend(cube_indices);
             }
         }
+
+        Self { vertices, indices }
     }
-
-    // color all voxels green for now
-    let colors = vec![[1.0, 1.0, 1.0, 0.0]; vertices.len()];
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    mesh.set_indices(Some(Indices::U32(indices)));
-
-    let collider = Collider::from_bevy_mesh(&mesh, &ComputedColliderShape::TriMesh).unwrap();
-
-    mesh.duplicate_vertices();
-    mesh.compute_flat_normals();
-
-    (mesh, collider)
 }
+
+#[derive(Debug)]
+pub struct Chunk {
+    pub voxels: Vec<Voxel>,
+    pub mesh_data: MeshData,
+    pub position: IVec3,
+}
+
+impl Chunk {
+    pub fn new(position: IVec3) -> Self {
+        let voxels = generate_voxel_data(position);
+        let mesh_data = MeshData::generate(position, voxels);
+
+        Self {
+            voxels,
+            mesh_data,
+            position,
+        }
+    }
+}
+
+// pub fn _generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
+//     let mut vertices = Vec::new();
+//     let mut indices = Vec::new();
+
+//     let chunk_offset = Vec3::new(
+//         chunk_pos.x as f32 * CHUNK_SIZE as f32,
+//         chunk_pos.y as f32 * CHUNK_SIZE as f32,
+//         chunk_pos.z as f32 * CHUNK_SIZE as f32,
+//     );
+
+//     for x in 0..CHUNK_SIZE {
+//         for y in 0..CHUNK_SIZE {
+//             for z in 0..CHUNK_SIZE {
+//                 let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
+
+//                 if !chunk.voxels[index].is_solid {
+//                     continue;
+//                 }
+
+//                 let pos = Vec3::new(
+//                     x as f32 + chunk_offset.x,
+//                     y as f32 + chunk_offset.y,
+//                     z as f32 + chunk_offset.z,
+//                 );
+
+//                 let cube_vertices = generate_cube_vertices(pos);
+//                 let cube_indices = generate_cube_indices(vertices.len() as u32);
+
+//                 vertices.extend(cube_vertices);
+//                 indices.extend(cube_indices);
+//             }
+//         }
+//     }
+
+//     // color all voxels green for now
+//     let colors = vec![[1.0, 1.0, 1.0, 0.0]; vertices.len()];
+//     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+//     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+//     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+//     mesh.set_indices(Some(Indices::U32(indices)));
+
+//     let collider = Collider::from_bevy_mesh(&mesh, &ComputedColliderShape::TriMesh).unwrap();
+
+//     mesh.duplicate_vertices();
+//     mesh.compute_flat_normals();
+
+//     (mesh, collider)
+// }
 
 pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
     let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
