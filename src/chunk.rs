@@ -1,17 +1,60 @@
 use crate::voxel::Voxel;
-use bevy::prelude::*;
-use noise::{NoiseFn, Simplex};
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
 
 pub const CHUNK_SIZE: i32 = 16;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct VoxelData {
+    pub voxels: Vec<Voxel>,
+}
+
+impl VoxelData {
+    pub fn generate_sphere() -> Self {
+        let mut voxels = Vec::new();
+
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
+                    if ((x - CHUNK_SIZE / 2) as f32 * (x - CHUNK_SIZE / 2) as f32
+                        + (y - CHUNK_SIZE / 2) as f32 * (y - CHUNK_SIZE / 2) as f32
+                        + (z - CHUNK_SIZE / 2) as f32 * (z - CHUNK_SIZE / 2) as f32)
+                        .sqrt()
+                        <= (CHUNK_SIZE / 2) as f32
+                    {
+                        voxels.push(Voxel { is_solid: true });
+                    } else {
+                        voxels.push(Voxel { is_solid: false });
+                    }
+                }
+            }
+        }
+
+        Self { voxels }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct MeshData {
     pub vertices: Vec<[f32; 3]>,
     pub indices: Vec<u32>,
 }
 
 impl MeshData {
-    pub fn generate(position: IVec3, voxels: Vec<Voxel>) -> Self {
+    pub fn create_mesh(&self) -> Mesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.vertices.clone());
+        mesh.set_indices(Some(Indices::U32(self.indices.clone())));
+        mesh.duplicate_vertices();
+        mesh.compute_flat_normals();
+
+        mesh
+    }
+
+    pub fn generate(position: IVec3, voxel_data: &VoxelData) -> Self {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
@@ -26,7 +69,7 @@ impl MeshData {
                 for z in 0..CHUNK_SIZE {
                     let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
 
-                    if !voxels[index].is_solid {
+                    if !voxel_data.voxels[index].is_solid {
                         continue;
                     }
 
@@ -49,98 +92,24 @@ impl MeshData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chunk {
-    pub voxels: Vec<Voxel>,
+    pub voxel_data: VoxelData,
     pub mesh_data: MeshData,
     pub position: IVec3,
 }
 
 impl Chunk {
     pub fn new(position: IVec3) -> Self {
-        let voxels = generate_voxel_data(position);
-        let mesh_data = MeshData::generate(position, voxels);
+        let voxel_data = VoxelData::generate_sphere();
+        let mesh_data = MeshData::generate(position, &voxel_data);
 
         Self {
-            voxels,
+            voxel_data,
             mesh_data,
             position,
         }
     }
-}
-
-// pub fn _generate_mesh(chunk_pos: &IVec3, chunk: &Chunk) -> (Mesh, Collider) {
-//     let mut vertices = Vec::new();
-//     let mut indices = Vec::new();
-
-//     let chunk_offset = Vec3::new(
-//         chunk_pos.x as f32 * CHUNK_SIZE as f32,
-//         chunk_pos.y as f32 * CHUNK_SIZE as f32,
-//         chunk_pos.z as f32 * CHUNK_SIZE as f32,
-//     );
-
-//     for x in 0..CHUNK_SIZE {
-//         for y in 0..CHUNK_SIZE {
-//             for z in 0..CHUNK_SIZE {
-//                 let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
-
-//                 if !chunk.voxels[index].is_solid {
-//                     continue;
-//                 }
-
-//                 let pos = Vec3::new(
-//                     x as f32 + chunk_offset.x,
-//                     y as f32 + chunk_offset.y,
-//                     z as f32 + chunk_offset.z,
-//                 );
-
-//                 let cube_vertices = generate_cube_vertices(pos);
-//                 let cube_indices = generate_cube_indices(vertices.len() as u32);
-
-//                 vertices.extend(cube_vertices);
-//                 indices.extend(cube_indices);
-//             }
-//         }
-//     }
-
-//     // color all voxels green for now
-//     let colors = vec![[1.0, 1.0, 1.0, 0.0]; vertices.len()];
-//     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-//     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-//     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-//     mesh.set_indices(Some(Indices::U32(indices)));
-
-//     let collider = Collider::from_bevy_mesh(&mesh, &ComputedColliderShape::TriMesh).unwrap();
-
-//     mesh.duplicate_vertices();
-//     mesh.compute_flat_normals();
-
-//     (mesh, collider)
-// }
-
-pub fn generate_voxel_data(chunk_pos: IVec3) -> Vec<Voxel> {
-    let mut voxels = Vec::with_capacity(CHUNK_SIZE.pow(3) as usize);
-    let simplex = Simplex::new(123);
-
-    for x in 0..CHUNK_SIZE {
-        for y in 0..CHUNK_SIZE {
-            for z in 0..CHUNK_SIZE {
-                let pos = IVec3::new(
-                    x + chunk_pos.x * CHUNK_SIZE,
-                    y + chunk_pos.x * CHUNK_SIZE,
-                    z + chunk_pos.x * CHUNK_SIZE,
-                );
-
-                let noise = simplex.get([pos.x as f64, pos.z as f64]);
-                let height = y as f64 / CHUNK_SIZE as f64;
-                let is_solid = noise >= height;
-                voxels.push(Voxel { is_solid });
-            }
-        }
-    }
-
-    voxels
 }
 
 fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
