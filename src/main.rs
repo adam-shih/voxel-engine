@@ -1,20 +1,18 @@
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
 use voxel_engine::chunk_manager::*;
-use voxel_engine::config::Config;
 use voxel_engine::diagnostic::ScreenDiagnosticsPlugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(PlayerPlugin)
-        // .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_plugin(ChunkManagerPlugin)
         .add_system(setup.on_startup())
-        .insert_resource(Config {
-            render_distance: 16,
+        .insert_resource(MovementSettings {
+            speed: 24.0, // default: 12.0
+            ..default()
         })
         .run();
 }
