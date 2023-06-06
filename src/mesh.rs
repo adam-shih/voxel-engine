@@ -1,4 +1,6 @@
-use crate::chunk::{VoxelData, CHUNK_SIZE};
+use crate::chunk::CHUNK_SIZE;
+use crate::tables::TRIANGULATION;
+use crate::voxel::VoxelData;
 use bevy::prelude::*;
 use bevy::render::{mesh::Indices, render_resource::PrimitiveTopology};
 
@@ -20,23 +22,68 @@ impl MeshData {
         mesh
     }
 
-    pub fn generate(position: IVec3, voxel_data: &VoxelData) -> Self {
+    pub fn generate_marching_cubes(chunk_position: IVec3, voxel_data: &VoxelData) -> Self {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
-        let chunk_offset = Vec3::new(
-            position.x as f32 * CHUNK_SIZE as f32,
-            position.y as f32 * CHUNK_SIZE as f32,
-            position.z as f32 * CHUNK_SIZE as f32,
-        );
+        let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
+        println!("voxel_data: {:?}", voxel_data);
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 for z in 0..CHUNK_SIZE {
-                    let index = (x + y * CHUNK_SIZE + z * CHUNK_SIZE.pow(2)) as usize;
+                    let mut case = 0;
+                    let relative_voxel_position = Vec3::new(x as f32, y as f32, z as f32);
+                    let global_voxel_position = relative_voxel_position + chunk_offset;
 
-                    if !voxel_data.voxels[index].is_active {
-                        continue;
+                    println!("{}", global_voxel_position);
+
+                    let cube_vertices = generate_cube_vertices(relative_voxel_position);
+                    println!("cube_vertices: {:?}", cube_vertices);
+
+                    for (i, vertex) in cube_vertices.iter().enumerate() {
+                        if let Some(voxel) =
+                            voxel_data.get(vertex[0] as i32, vertex[1] as i32, vertex[2] as i32)
+                        {
+                            println!("voxel: {:?}", voxel);
+                            if voxel.is_active {
+                                case |= 1 << i;
+                            }
+                        }
+                    }
+
+                    println!("case: {}", case);
+
+                    // lookup case in table to get triangles
+                    let triangles = TRIANGULATION[case]
+                        .clone()
+                        .iter()
+                        .filter(|i| **i != -1)
+                        .map(|i| *i as u32 + vertices.len() as u32)
+                        .collect::<Vec<_>>();
+
+                    vertices.extend(generate_cube_edges(global_voxel_position));
+                    indices.extend(triangles);
+                }
+            }
+        }
+
+        Self { vertices, indices }
+    }
+
+    pub fn generate(chunk_position: IVec3, voxel_data: &VoxelData) -> Self {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+
+        let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
+
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
+                    if let Some(voxel) = voxel_data.get(x, y, z) {
+                        if voxel.is_active {
+                            continue;
+                        }
                     }
 
                     let global_voxel_pos = Vec3::new(
@@ -65,26 +112,47 @@ fn generate_cube_vertices(pos: Vec3) -> Vec<[f32; 3]> {
 
     // 8 points of cube
     vec![
+        [x + 0.0, y + 0.0, z + 0.0],
+        [x + 0.0, y + 1.0, z + 0.0],
+        [x + 1.0, y + 1.0, z + 0.0],
+        [x + 1.0, y + 0.0, z + 0.0],
+        [x + 0.0, y + 0.0, z + 1.0],
         [x + 0.0, y + 1.0, z + 1.0],
         [x + 1.0, y + 1.0, z + 1.0],
-        [x + 1.0, y + 1.0, z + 0.0],
-        [x + 0.0, y + 1.0, z + 0.0],
-        [x + 0.0, y + 0.0, z + 0.0],
-        [x + 1.0, y + 0.0, z + 0.0],
         [x + 1.0, y + 0.0, z + 1.0],
-        [x + 0.0, y + 0.0, z + 1.0],
+    ]
+}
+
+fn generate_cube_edges(pos: Vec3) -> Vec<[f32; 3]> {
+    let x = pos.x;
+    let y = pos.y;
+    let z = pos.z;
+
+    vec![
+        [x + 0.0, y + 0.5, z + 0.0],
+        [x + 0.5, y + 1.0, z + 0.0],
+        [x + 1.0, y + 0.5, z + 0.0],
+        [x + 0.5, y + 0.0, z + 0.0],
+        [x + 0.0, y + 0.5, z + 1.0],
+        [x + 0.5, y + 1.0, z + 1.0],
+        [x + 1.0, y + 0.5, z + 1.0],
+        [x + 0.5, y + 0.0, z + 1.0],
+        [x + 0.0, y + 0.0, z + 0.5],
+        [x + 0.0, y + 1.0, z + 0.5],
+        [x + 1.0, y + 1.0, z + 0.5],
+        [x + 1.0, y + 0.0, z + 0.5],
     ]
 }
 
 fn generate_cube_indices(start_index: u32) -> Vec<u32> {
     // indices of points that make up triangles
     vec![
-        0, 1, 2, 2, 3, 0, // top
-        5, 7, 4, 5, 6, 7, // bottom
-        7, 0, 4, 4, 0, 3, // left
-        6, 5, 1, 1, 5, 2, // right
-        7, 1, 0, 7, 6, 1, // front
-        5, 4, 3, 3, 2, 5, // back
+        1, 5, 2, 5, 6, 2, // top
+        3, 4, 0, 3, 7, 4, // bottom
+        5, 1, 4, 4, 1, 0, // left
+        2, 6, 7, 2, 7, 3, // right
+        1, 2, 3, 3, 0, 1, // front
+        6, 5, 7, 5, 4, 7, // back
     ]
     .iter()
     .map(|index| index + start_index)
