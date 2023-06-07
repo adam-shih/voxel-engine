@@ -27,32 +27,25 @@ impl MeshData {
         let mut indices = Vec::new();
 
         let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
-        println!("voxel_data: {:?}", voxel_data);
 
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
+        for x in -1..CHUNK_SIZE {
+            for y in -1..CHUNK_SIZE {
+                for z in -1..CHUNK_SIZE {
                     let mut case = 0;
                     let relative_voxel_position = Vec3::new(x as f32, y as f32, z as f32);
                     let global_voxel_position = relative_voxel_position + chunk_offset;
 
-                    println!("{}", global_voxel_position);
-
                     let cube_vertices = generate_cube_vertices(relative_voxel_position);
-                    println!("cube_vertices: {:?}", cube_vertices);
 
                     for (i, vertex) in cube_vertices.iter().enumerate() {
                         if let Some(voxel) =
                             voxel_data.get(vertex[0] as i32, vertex[1] as i32, vertex[2] as i32)
                         {
-                            println!("voxel: {:?}", voxel);
                             if voxel.is_active {
                                 case |= 1 << i;
                             }
                         }
                     }
-
-                    println!("case: {}", case);
 
                     // lookup case in table to get triangles
                     let triangles = TRIANGULATION[case]

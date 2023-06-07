@@ -1,4 +1,4 @@
-use crate::chunk::*;
+use crate::{chunk::*, voxel::Voxel};
 use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::collections::{HashMap, VecDeque};
@@ -17,12 +17,22 @@ impl Default for ChunkManager {
             active_chunks: HashMap::new(),
             load_queue: VecDeque::new(),
             unload_queue: VecDeque::new(),
-            render_distance: 8,
+            render_distance: 3,
         }
     }
 }
 
 impl ChunkManager {
+    pub fn get_voxel_at_global_position(global_pos: IVec3) -> Option<&'static Voxel> {
+        let chunk_pos = global_pos / CHUNK_SIZE;
+        let relative_voxel_pos = global_pos - chunk_pos;
+
+        println!("chunk_pos: {:?}", chunk_pos);
+        println!("relative_voxel_pos: {:?}", relative_voxel_pos);
+
+        None
+    }
+
     pub fn load_chunk(&mut self) {
         if let Some(chunk) = self.load_queue.pop_front() {
             self.active_chunks.insert(chunk.position, chunk);
