@@ -1,4 +1,4 @@
-use crate::{chunk::*, voxel::Voxel};
+use crate::{chunk::*, mesh::MeshData, voxel::Voxel};
 use bevy::prelude::*;
 use bevy_flycam::FlyCam;
 use std::collections::{HashMap, VecDeque};
@@ -8,6 +8,7 @@ pub struct ChunkManager {
     active_chunks: HashMap<IVec3, Chunk>,
     load_queue: VecDeque<Chunk>,
     unload_queue: VecDeque<Chunk>,
+    _render_queue: VecDeque<Chunk>,
     render_distance: i32,
 }
 
@@ -17,18 +18,20 @@ impl Default for ChunkManager {
             active_chunks: HashMap::new(),
             load_queue: VecDeque::new(),
             unload_queue: VecDeque::new(),
-            render_distance: 3,
+            _render_queue: VecDeque::new(),
+            render_distance: 8,
         }
     }
 }
 
 impl ChunkManager {
-    pub fn get_voxel_at_global_position(global_pos: IVec3) -> Option<&'static Voxel> {
+    pub fn get_voxel_at_global_position(&self, global_pos: IVec3) -> Option<&Voxel> {
         let chunk_pos = global_pos / CHUNK_SIZE;
-        let relative_voxel_pos = global_pos - chunk_pos;
+        let relative_voxel_pos = global_pos - (chunk_pos * CHUNK_SIZE);
 
-        println!("chunk_pos: {:?}", chunk_pos);
-        println!("relative_voxel_pos: {:?}", relative_voxel_pos);
+        if let Some(chunk) = self.active_chunks.get(&chunk_pos) {
+            return chunk.voxel_data.voxels.get(&relative_voxel_pos);
+        }
 
         None
     }
@@ -131,7 +134,10 @@ pub fn spawn_chunks(
     let load_queue = chunk_manager.load_queue.clone();
 
     for chunk in load_queue {
-        let mesh = chunk.mesh_data.create_mesh();
+        chunk_manager.load_chunk();
+        // let mesh = chunk.mesh_data.create_mesh();
+        let mesh_data = MeshData::generate_marching_cubes(chunk.position, &chunk_manager);
+        let mesh = mesh_data.create_mesh();
 
         let id = commands
             .spawn(PbrBundle {
@@ -141,7 +147,6 @@ pub fn spawn_chunks(
             })
             .id();
 
-        chunk_manager.load_chunk();
         chunk_entity_map.0.insert(chunk.position, id);
     }
 }
