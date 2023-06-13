@@ -27,8 +27,6 @@ impl MeshData {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
-        // let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
-
         for x in -1..CHUNK_SIZE {
             for y in -1..CHUNK_SIZE {
                 for z in -1..CHUNK_SIZE {
@@ -36,31 +34,14 @@ impl MeshData {
                     let relative_voxel_position = IVec3::new(x, y, z);
                     let global_voxel_position = relative_voxel_position + chunk.position;
 
-                    let global_cube_vertices =
-                        generate_cube_vertices(global_voxel_position.as_vec3());
-                    let cube_vertices = generate_cube_vertices(relative_voxel_position.as_vec3());
+                    let cube_vertices = generate_cube_vertices(global_voxel_position.as_vec3());
 
                     for (i, vertex) in cube_vertices.iter().enumerate() {
                         let pos = IVec3::new(vertex[0] as i32, vertex[1] as i32, vertex[2] as i32);
 
-                        if let Some(voxel) = chunk.voxel_data.voxels.get(&pos) {
+                        if let Some(voxel) = chunk_manager.get_voxel_at_global_position(pos) {
                             if voxel.is_active {
                                 case |= 1 << i;
-                            }
-                        } else {
-                            println!("yes");
-                            let global_pos = IVec3::new(
-                                global_cube_vertices[i][0] as i32,
-                                global_cube_vertices[i][1] as i32,
-                                global_cube_vertices[i][2] as i32,
-                            );
-
-                            if let Some(voxel) =
-                                chunk_manager.get_voxel_at_global_position(global_pos)
-                            {
-                                if voxel.is_active {
-                                    case |= 1 << i;
-                                }
                             }
                         }
                     }

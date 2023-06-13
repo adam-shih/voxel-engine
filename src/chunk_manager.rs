@@ -17,16 +17,15 @@ impl Default for ChunkManager {
             active_chunks: HashMap::new(),
             load_queue: VecDeque::new(),
             unload_queue: VecDeque::new(),
-            render_distance: 4,
+            render_distance: 8,
         }
     }
 }
 
 impl ChunkManager {
     pub fn get_voxel_at_global_position(&self, global_pos: IVec3) -> Option<&Voxel> {
-        // let chunk_pos = global_pos / CHUNK_SIZE;
         let chunk_pos = (global_pos.as_vec3() / CHUNK_SIZE as f32).floor() * CHUNK_SIZE as f32;
-        let relative_voxel_pos = global_pos % CHUNK_SIZE;
+        let relative_voxel_pos = (global_pos % CHUNK_SIZE).abs();
 
         if let Some(chunk) = self.active_chunks.get(&chunk_pos.as_ivec3()) {
             return chunk.voxel_data.voxels.get(&relative_voxel_pos);
@@ -67,14 +66,8 @@ impl ChunkManager {
     }
 
     fn populate_load_queue(&mut self, player_chunk_position: IVec3) {
-        // let min_x = player_chunk_position.x - self.render_distance;
-        // let max_x = player_chunk_position.x + self.render_distance;
-        // let min_z = player_chunk_position.z - self.render_distance;
-        // let max_z = player_chunk_position.z + self.render_distance;
-
         for x in -self.render_distance..=self.render_distance {
             for z in -self.render_distance..=self.render_distance {
-                // let chunk_pos = IVec3::new(x, 0, z);
                 let mut chunk_pos = player_chunk_position + (IVec3::new(x, 0, z) * CHUNK_SIZE);
                 chunk_pos.y = 0;
 
@@ -151,7 +144,7 @@ pub fn spawn_chunks(
     let load_queue = chunk_manager.load_queue.clone();
 
     for chunk in load_queue {
-        let reload_queue = chunk_manager.load_chunk();
+        let _reload_queue = chunk_manager.load_chunk();
 
         let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
         let mesh = mesh_data.create_mesh();
@@ -166,15 +159,17 @@ pub fn spawn_chunks(
 
         chunk_entity_map.0.insert(chunk.position, id);
 
-        if let Some(q) = reload_queue {
-            for chunk in q {
-                let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
-                let mesh = mesh_data.create_mesh();
-                if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
-                    commands.entity(*id).insert(meshes.add(mesh));
-                }
-            }
-        }
+        // Might do something with this..?
+        //
+        // if let Some(q) = reload_queue {
+        //     for chunk in q {
+        //         let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
+        //         let mesh = mesh_data.create_mesh();
+        //         if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
+        //             commands.entity(*id).insert(meshes.add(mesh));
+        //         }
+        //     }
+        // }
     }
 }
 

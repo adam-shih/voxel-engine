@@ -9,10 +9,9 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(ScreenDiagnosticsPlugin)
         .add_plugin(ChunkManagerPlugin)
-        // .add_startup_system(spawn_single_chunk_at_origin)
         .add_startup_system(setup)
         .insert_resource(MovementSettings {
-            speed: 6.0, // default: 12.0
+            speed: 12.0, // default: 12.0
             ..default()
         })
         .run();
