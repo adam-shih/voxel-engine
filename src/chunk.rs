@@ -1,7 +1,7 @@
 use crate::voxel::VoxelData;
 use bevy::prelude::*;
 
-pub const CHUNK_SIZE: i32 = 2;
+pub const CHUNK_SIZE: i32 = 4;
 
 #[derive(Debug, Clone)]
 pub struct Chunk {

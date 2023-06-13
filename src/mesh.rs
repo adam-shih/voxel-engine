@@ -1,4 +1,4 @@
-use crate::chunk::{self, CHUNK_SIZE};
+use crate::chunk::{Chunk, CHUNK_SIZE};
 use crate::chunk_manager::ChunkManager;
 use crate::tables::TRIANGULATION;
 use crate::voxel::VoxelData;
@@ -23,27 +23,44 @@ impl MeshData {
         mesh
     }
 
-    pub fn generate_marching_cubes(chunk_position: IVec3, chunk_manager: &ChunkManager) -> Self {
+    pub fn generate_marching_cubes(chunk: &Chunk, chunk_manager: &ChunkManager) -> Self {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
         // let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
 
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
+        for x in -1..CHUNK_SIZE {
+            for y in -1..CHUNK_SIZE {
+                for z in -1..CHUNK_SIZE {
                     let mut case = 0;
                     let relative_voxel_position = IVec3::new(x, y, z);
-                    let global_voxel_position = relative_voxel_position + chunk_position;
+                    let global_voxel_position = relative_voxel_position + chunk.position;
 
-                    let cube_vertices = generate_cube_vertices(global_voxel_position.as_vec3());
+                    let global_cube_vertices =
+                        generate_cube_vertices(global_voxel_position.as_vec3());
+                    let cube_vertices = generate_cube_vertices(relative_voxel_position.as_vec3());
 
                     for (i, vertex) in cube_vertices.iter().enumerate() {
                         let pos = IVec3::new(vertex[0] as i32, vertex[1] as i32, vertex[2] as i32);
 
-                        if let Some(voxel) = chunk_manager.get_voxel_at_global_position(pos) {
+                        if let Some(voxel) = chunk.voxel_data.voxels.get(&pos) {
                             if voxel.is_active {
                                 case |= 1 << i;
+                            }
+                        } else {
+                            println!("yes");
+                            let global_pos = IVec3::new(
+                                global_cube_vertices[i][0] as i32,
+                                global_cube_vertices[i][1] as i32,
+                                global_cube_vertices[i][2] as i32,
+                            );
+
+                            if let Some(voxel) =
+                                chunk_manager.get_voxel_at_global_position(global_pos)
+                            {
+                                if voxel.is_active {
+                                    case |= 1 << i;
+                                }
                             }
                         }
                     }

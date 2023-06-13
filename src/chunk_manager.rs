@@ -153,7 +153,7 @@ pub fn spawn_chunks(
     for chunk in load_queue {
         let reload_queue = chunk_manager.load_chunk();
 
-        let mesh_data = MeshData::generate_marching_cubes(chunk.position, &chunk_manager);
+        let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
         let mesh = mesh_data.create_mesh();
 
         let id = commands
@@ -168,7 +168,7 @@ pub fn spawn_chunks(
 
         if let Some(q) = reload_queue {
             for chunk in q {
-                let mesh_data = MeshData::generate_marching_cubes(chunk.position, &chunk_manager);
+                let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
                 let mesh = mesh_data.create_mesh();
                 if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
                     commands.entity(*id).insert(meshes.add(mesh));
