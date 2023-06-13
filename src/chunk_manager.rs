@@ -8,7 +8,6 @@ pub struct ChunkManager {
     active_chunks: HashMap<IVec3, Chunk>,
     load_queue: VecDeque<Chunk>,
     unload_queue: VecDeque<Chunk>,
-    _render_queue: VecDeque<Chunk>,
     render_distance: i32,
 }
 
@@ -18,28 +17,42 @@ impl Default for ChunkManager {
             active_chunks: HashMap::new(),
             load_queue: VecDeque::new(),
             unload_queue: VecDeque::new(),
-            _render_queue: VecDeque::new(),
-            render_distance: 8,
+            render_distance: 4,
         }
     }
 }
 
 impl ChunkManager {
     pub fn get_voxel_at_global_position(&self, global_pos: IVec3) -> Option<&Voxel> {
-        let chunk_pos = global_pos / CHUNK_SIZE;
-        let relative_voxel_pos = global_pos - (chunk_pos * CHUNK_SIZE);
+        // let chunk_pos = global_pos / CHUNK_SIZE;
+        let chunk_pos = (global_pos.as_vec3() / CHUNK_SIZE as f32).floor() * CHUNK_SIZE as f32;
+        let relative_voxel_pos = global_pos % CHUNK_SIZE;
 
-        if let Some(chunk) = self.active_chunks.get(&chunk_pos) {
+        if let Some(chunk) = self.active_chunks.get(&chunk_pos.as_ivec3()) {
             return chunk.voxel_data.voxels.get(&relative_voxel_pos);
         }
 
         None
     }
 
-    pub fn load_chunk(&mut self) {
+    pub fn load_chunk(&mut self) -> Option<Vec<Chunk>> {
+        let mut reload_queue = Vec::new();
+
         if let Some(chunk) = self.load_queue.pop_front() {
+            // check for chunks to update around new load
+            for x in chunk.position.x - 1..=chunk.position.x + 1 {
+                for z in chunk.position.z - 1..=chunk.position.z + 1 {
+                    if let Some(other_chunk) = self.active_chunks.get(&IVec3::new(x, 0, z)) {
+                        reload_queue.push(other_chunk.clone());
+                    }
+                }
+            }
+
             self.active_chunks.insert(chunk.position, chunk);
+            return Some(reload_queue);
         }
+
+        None
     }
 
     pub fn unload_chunk(&mut self) {
@@ -48,22 +61,22 @@ impl ChunkManager {
         }
     }
 
-    pub fn update(&mut self, player_position: IVec3) {
-        let player_position = player_position / CHUNK_SIZE;
-
-        self.populate_load_queue(player_position);
-        self.populate_unload_queue(player_position);
+    pub fn update(&mut self, player_chunk_position: IVec3) {
+        self.populate_load_queue(player_chunk_position);
+        self.populate_unload_queue(player_chunk_position);
     }
 
-    fn populate_load_queue(&mut self, player_position: IVec3) {
-        let min_x = player_position.x - self.render_distance;
-        let max_x = player_position.x + self.render_distance;
-        let min_z = player_position.z - self.render_distance;
-        let max_z = player_position.z + self.render_distance;
+    fn populate_load_queue(&mut self, player_chunk_position: IVec3) {
+        // let min_x = player_chunk_position.x - self.render_distance;
+        // let max_x = player_chunk_position.x + self.render_distance;
+        // let min_z = player_chunk_position.z - self.render_distance;
+        // let max_z = player_chunk_position.z + self.render_distance;
 
-        for x in min_x..=max_x {
-            for z in min_z..=max_z {
-                let chunk_pos = IVec3::new(x, 0, z);
+        for x in -self.render_distance..=self.render_distance {
+            for z in -self.render_distance..=self.render_distance {
+                // let chunk_pos = IVec3::new(x, 0, z);
+                let mut chunk_pos = player_chunk_position + (IVec3::new(x, 0, z) * CHUNK_SIZE);
+                chunk_pos.y = 0;
 
                 if self.active_chunks.contains_key(&chunk_pos) {
                     continue;
@@ -75,12 +88,14 @@ impl ChunkManager {
         }
     }
 
-    fn populate_unload_queue(&mut self, player_position: IVec3) {
+    fn populate_unload_queue(&mut self, player_chunk_position: IVec3) {
         let mut keys_to_remove = Vec::new();
 
         for chunk_pos in self.active_chunks.keys() {
-            if (player_position.x - chunk_pos.x).abs() > self.render_distance
-                || (player_position.z - chunk_pos.z).abs() > self.render_distance
+            if ((player_chunk_position.x / CHUNK_SIZE) - (chunk_pos.x / CHUNK_SIZE)).abs()
+                > self.render_distance
+                || ((player_chunk_position.z / CHUNK_SIZE) - (chunk_pos.z / CHUNK_SIZE)).abs()
+                    > self.render_distance
             {
                 keys_to_remove.push(chunk_pos.clone());
             }
@@ -120,7 +135,9 @@ pub fn update_chunk_manager(
     player_pos_query: Query<&Transform, With<FlyCam>>,
 ) {
     if let Ok(player_position) = player_pos_query.get_single() {
-        chunk_manager.update(player_position.translation.as_ivec3());
+        let player_chunk_position = player_position.translation / CHUNK_SIZE as f32;
+        let player_chunk_position = player_chunk_position.floor().as_ivec3() * CHUNK_SIZE;
+        chunk_manager.update(player_chunk_position);
     }
 }
 
@@ -134,8 +151,8 @@ pub fn spawn_chunks(
     let load_queue = chunk_manager.load_queue.clone();
 
     for chunk in load_queue {
-        chunk_manager.load_chunk();
-        // let mesh = chunk.mesh_data.create_mesh();
+        let reload_queue = chunk_manager.load_chunk();
+
         let mesh_data = MeshData::generate_marching_cubes(chunk.position, &chunk_manager);
         let mesh = mesh_data.create_mesh();
 
@@ -148,6 +165,16 @@ pub fn spawn_chunks(
             .id();
 
         chunk_entity_map.0.insert(chunk.position, id);
+
+        if let Some(q) = reload_queue {
+            for chunk in q {
+                let mesh_data = MeshData::generate_marching_cubes(chunk.position, &chunk_manager);
+                let mesh = mesh_data.create_mesh();
+                if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
+                    commands.entity(*id).insert(meshes.add(mesh));
+                }
+            }
+        }
     }
 }
 
