@@ -8,6 +8,7 @@ pub struct ChunkManager {
     active_chunks: HashMap<IVec3, Chunk>,
     load_queue: VecDeque<Chunk>,
     unload_queue: VecDeque<Chunk>,
+    reload_queue: VecDeque<Chunk>,
     render_distance: i32,
 }
 
@@ -17,6 +18,7 @@ impl Default for ChunkManager {
             active_chunks: HashMap::new(),
             load_queue: VecDeque::new(),
             unload_queue: VecDeque::new(),
+            reload_queue: VecDeque::new(),
             render_distance: 8,
         }
     }
@@ -34,24 +36,30 @@ impl ChunkManager {
         None
     }
 
-    pub fn load_chunk(&mut self) -> Option<Vec<Chunk>> {
-        let mut reload_queue = Vec::new();
-
+    // When loading a chunk, we need to add surrounding chunks to the
+    // reload_queue so that the mesh of those chunks can be updated to
+    // fit seamlessly to the newly loaded chunk.
+    pub fn load_chunk(&mut self) {
         if let Some(chunk) = self.load_queue.pop_front() {
-            // check for chunks to update around new load
-            for x in chunk.position.x - 1..=chunk.position.x + 1 {
-                for z in chunk.position.z - 1..=chunk.position.z + 1 {
-                    if let Some(other_chunk) = self.active_chunks.get(&IVec3::new(x, 0, z)) {
-                        reload_queue.push(other_chunk.clone());
+            for x in -1..=1 {
+                for z in -1..=1 {
+                    if x == 0 && z == 0 {
+                        continue;
+                    }
+
+                    let chunk_x = chunk.position.x + CHUNK_SIZE * x;
+                    let chunk_z = chunk.position.z + CHUNK_SIZE * z;
+
+                    if let Some(other_chunk) =
+                        self.active_chunks.get(&IVec3::new(chunk_x, 0, chunk_z))
+                    {
+                        self.reload_queue.push_back(other_chunk.clone());
                     }
                 }
             }
 
             self.active_chunks.insert(chunk.position, chunk);
-            return Some(reload_queue);
         }
-
-        None
     }
 
     pub fn unload_chunk(&mut self) {
@@ -110,6 +118,7 @@ impl Plugin for ChunkManagerPlugin {
             .init_resource::<ChunkEntityMap>()
             .add_system(spawn_chunks)
             .add_system(despawn_chunks)
+            .add_system(reload_chunks)
             .add_system(update_chunk_manager);
     }
 }
@@ -134,6 +143,29 @@ pub fn update_chunk_manager(
     }
 }
 
+pub fn reload_chunks(
+    mut commands: Commands,
+    mut chunk_manager: ResMut<ChunkManager>,
+    chunk_entity_map: ResMut<ChunkEntityMap>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let reload_queue = chunk_manager.reload_queue.clone();
+
+    for chunk in reload_queue {
+        chunk_manager.reload_queue.pop_front();
+
+        if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
+            let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
+            let mesh = mesh_data.create_mesh();
+            // println!("{:?}", meshes.add(mesh).is_strong());
+            commands
+                .entity(*id)
+                .insert((meshes.add(mesh), materials.add(Color::RED.into())));
+        }
+    }
+}
+
 pub fn spawn_chunks(
     mut commands: Commands,
     mut chunk_manager: ResMut<ChunkManager>,
@@ -144,7 +176,7 @@ pub fn spawn_chunks(
     let load_queue = chunk_manager.load_queue.clone();
 
     for chunk in load_queue {
-        let _reload_queue = chunk_manager.load_chunk();
+        chunk_manager.load_chunk();
 
         let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
         let mesh = mesh_data.create_mesh();
@@ -158,18 +190,6 @@ pub fn spawn_chunks(
             .id();
 
         chunk_entity_map.0.insert(chunk.position, id);
-
-        // Might do something with this..?
-        //
-        // if let Some(q) = reload_queue {
-        //     for chunk in q {
-        //         let mesh_data = MeshData::generate_marching_cubes(&chunk, &chunk_manager);
-        //         let mesh = mesh_data.create_mesh();
-        //         if let Some(id) = chunk_entity_map.0.get(&chunk.position) {
-        //             commands.entity(*id).insert(meshes.add(mesh));
-        //         }
-        //     }
-        // }
     }
 }
 

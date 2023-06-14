@@ -1,7 +1,6 @@
 use crate::chunk::{Chunk, CHUNK_SIZE};
 use crate::chunk_manager::ChunkManager;
 use crate::tables::TRIANGULATION;
-use crate::voxel::VoxelData;
 use bevy::prelude::*;
 use bevy::render::{mesh::Indices, render_resource::PrimitiveTopology};
 
@@ -27,9 +26,9 @@ impl MeshData {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
-        for x in -1..CHUNK_SIZE {
-            for y in -1..CHUNK_SIZE {
-                for z in -1..CHUNK_SIZE {
+        for x in 0..CHUNK_SIZE {
+            for y in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
                     let mut case = 0;
                     let relative_voxel_position = IVec3::new(x, y, z);
                     let global_voxel_position = relative_voxel_position + chunk.position;
@@ -56,39 +55,6 @@ impl MeshData {
 
                     vertices.extend(generate_cube_edges(global_voxel_position.as_vec3()));
                     indices.extend(triangles);
-                }
-            }
-        }
-
-        Self { vertices, indices }
-    }
-
-    pub fn generate(chunk_position: IVec3, voxel_data: &VoxelData) -> Self {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
-
-        let chunk_offset = (chunk_position * CHUNK_SIZE).as_vec3();
-
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
-                    if let Some(voxel) = voxel_data.get(x, y, z) {
-                        if voxel.is_active {
-                            continue;
-                        }
-                    }
-
-                    let global_voxel_pos = Vec3::new(
-                        x as f32 + chunk_offset.x,
-                        y as f32 + chunk_offset.y,
-                        z as f32 + chunk_offset.z,
-                    );
-
-                    let cube_vertices = generate_cube_vertices(global_voxel_pos);
-                    let cube_indices = generate_cube_indices(vertices.len() as u32);
-
-                    vertices.extend(cube_vertices);
-                    indices.extend(cube_indices);
                 }
             }
         }
@@ -136,7 +102,7 @@ fn generate_cube_edges(pos: Vec3) -> Vec<[f32; 3]> {
     ]
 }
 
-fn generate_cube_indices(start_index: u32) -> Vec<u32> {
+fn _generate_cube_indices(start_index: u32) -> Vec<u32> {
     // indices of points that make up triangles
     vec![
         1, 5, 2, 5, 6, 2, // top
