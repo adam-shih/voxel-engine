@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
-use voxel_engine::chunk_manager::*;
+use voxel_engine::chunk_manager::plugin::ChunkManagerPlugin;
 use voxel_engine::diagnostic::ScreenDiagnosticsPlugin;
 
 fn main() {
