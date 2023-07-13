@@ -11,14 +11,13 @@ fn main() {
         .add_plugin(ChunkManagerPlugin)
         .add_startup_system(setup)
         .insert_resource(MovementSettings {
-            speed: 12.0, // default: 12.0
+            speed: 12.0,
             ..default()
         })
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    // Spawn a simple light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
